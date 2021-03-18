@@ -18,9 +18,9 @@
                 "kind": "nodejs:10",
                 "default": true,
                 "image": {
-                    "prefix": "openwhisk",
+                    "prefix": "kalevalp",
                     "name": "action-nodejs-v10",
-                    "tag": "nightly"
+                    "tag": "latest"
                 },
                 "deprecated": false,
                 "attached": {
@@ -45,9 +45,9 @@
                 "kind": "nodejs:12",
                 "default": false,
                 "image": {
-                    "prefix": "openwhisk",
+                    "prefix": "kalevalp",
                     "name": "action-nodejs-v12",
-                    "tag": "nightly"
+                    "tag": "latest"
                 },
                 "deprecated": false,
                 "attached": {
@@ -59,9 +59,9 @@
                 "kind": "nodejs:14",
                 "default": false,
                 "image": {
-                    "prefix": "openwhisk",
+                    "prefix": "kalevalp",
                     "name": "action-nodejs-v14",
-                    "tag": "nightly"
+                    "tag": "latest"
                 },
                 "deprecated": false,
                 "attached": {

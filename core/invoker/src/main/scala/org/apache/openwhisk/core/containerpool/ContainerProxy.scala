@@ -814,7 +814,7 @@ class ContainerProxy(factory: (TransactionId,
           .map(Some(_))
     }
 
-    val activation: Future[WhiskActivation] = initialize
+    val postRun: Future[WhiskActivation] = initialize
       .flatMap { initInterval =>
         //immediately setup warmedData for use (before first execution) so that concurrent actions can use it asap
         if (initInterval.isDefined) {
@@ -871,7 +871,7 @@ class ContainerProxy(factory: (TransactionId,
     // completion message which frees a load balancer slot is sent after the active ack future
     // completes to ensure proper ordering.
     val sendResult = if (job.msg.blocking) {
-      activation.map { result =>
+      postRun.map { result =>
         val msg =
           if (splitAckMessagesPendingLogCollection) ResultMessage(tid, result)
           else CombinedCompletionAndResultMessage(tid, result, instance)
@@ -881,11 +881,38 @@ class ContainerProxy(factory: (TransactionId,
       // For non-blocking request, do not forward the result.
       if (splitAckMessagesPendingLogCollection) Future.successful(())
       else
-        activation.map { result =>
+        postRun.map { result =>
           val msg = CompletionMessage(tid, result, instance)
           sendActiveAck(tid, result, job.msg.blocking, job.msg.rootControllerIndex, job.msg.user.namespace.uuid, msg)
         }
     }
+
+    val activation: Future[WhiskActivation] = postRun
+      .flatMap(wa =>
+        container
+          .asyncawait(
+            actionTimeout,
+            job.action.limits.concurrency.maxConcurrent
+          )
+          .map(i => {
+            val totalInterval = Interval(wa.start, i.end)
+            WhiskActivation(
+              wa.namespace,
+              wa.name,
+              wa.subject,
+              wa.activationId,
+              totalInterval.start,
+              totalInterval.end,
+              wa.cause,
+              wa.response,
+              wa.logs,
+              wa.version,
+              wa.publish,
+              wa.annotations,
+              Some(totalInterval.duration.toMillis)
+            )
+          })
+      )
 
     val context = UserContext(job.msg.user)
 

@@ -190,6 +190,37 @@ trait Container {
       }
   }
 
+  def asyncawait(
+          timeout: FiniteDuration,
+          maxConcurrent: Int,
+          reschedule: Boolean = false)(implicit transid: TransactionId): Future[Interval] = {
+    val start =
+      transid.started(
+        this,
+        LoggingMarkers.INVOKER_ACTIVATION_RUN,
+        s"sending await to $id $addr",
+        logLevel = InfoLevel)
+
+    val body = JsObject("value" -> JsObject.empty)
+
+    callContainer("/await", body, timeout, maxConcurrent, retry = false, reschedule)
+      .andThen { // never fails
+        case Success(r: RunResult) =>
+          transid.finished(
+            this,
+            start.copy(start = r.interval.start),
+            s"await result: ${r.toBriefString}",
+            endTime = r.interval.end,
+            logLevel = InfoLevel)
+        case Failure(t) =>
+          transid.failed(this, start, s"run failed with $t")
+      }
+      .map { result =>
+        result.interval
+      }
+  }
+
+
   /**
    * Makes an HTTP request to the container.
    *
